@@ -22,6 +22,8 @@ public interface AppearanceInterface {
 
     int getSelectedDayBackgroundEndColor();
 
+    int getSelectedDayBackgroundRectangleColor();
+
     int getCurrentDayTextColor();
 
     int getCurrentDayIconRes();
@@ -63,6 +65,8 @@ public interface AppearanceInterface {
     void setSelectedDayTextColor(int selectedDayTextColor);
 
     void setSelectedDayBackgroundColor(int selectedDayBackgroundColor);
+
+    void selectedDayBackgroundRectangleColor(int selectedDayBackgroundColor);
 
     void setSelectedDayBackgroundStartColor(int selectedDayBackgroundStartColor);
 

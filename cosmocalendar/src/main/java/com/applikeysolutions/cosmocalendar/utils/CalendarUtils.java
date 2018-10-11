@@ -80,7 +80,7 @@ public final class CalendarUtils {
         return daysOfTheWeek;
     }
 
-    public static List<String> createWeekDayTitles(int firstDayOfWeek) {
+    public static List<String> createWeekDayTitles(int firstDayOfWeek) { //Retruns Mon,Tue etc
         SimpleDateFormat sdf = new SimpleDateFormat(Constants.DAY_NAME_FORMAT, Locale.getDefault());
         final List<String> titles = new ArrayList<>();
 
@@ -97,10 +97,6 @@ public final class CalendarUtils {
         final List<Month> months = new ArrayList<>();
 
         final Calendar calendar = Calendar.getInstance();
-        for (int i = 0; i < SettingsManager.DEFAULT_MONTH_COUNT / 2; i++) {
-            calendar.add(Calendar.MONTH, -1);
-        }
-
         for (int i = 0; i < SettingsManager.DEFAULT_MONTH_COUNT; i++) {
             months.add(createMonth(calendar.getTime(), settingsManager));
             DateUtils.addMonth(calendar);
@@ -162,13 +158,20 @@ public final class CalendarUtils {
         }
 
         if (settingsManager.getDisabledDaysCriteria() != null) {
-            if(!day.isDisabled()){
+            if (!day.isDisabled()) {
                 day.setDisabled(isDayDisabledByCriteria(day, settingsManager.getDisabledDaysCriteria()));
             }
         }
 
         if (settingsManager.getConnectedDaysManager().isAnyConnectedDays()) {
             settingsManager.getConnectedDaysManager().applySettingsToDay(day);
+        }
+
+        if (settingsManager.getMinSelectionDate() != null && settingsManager.getMaxSelectionDate() != null) {
+            if (day.getCalendar().getTimeInMillis() < settingsManager.getMinSelectionDate().getTimeInMillis() &&
+                    day.getCalendar().getTimeInMillis() < settingsManager.getMaxSelectionDate().getTimeInMillis()) {
+                day.setDisabled(true);
+            }
         }
     }
 

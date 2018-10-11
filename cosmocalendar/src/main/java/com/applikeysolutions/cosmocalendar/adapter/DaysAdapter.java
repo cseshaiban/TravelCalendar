@@ -39,7 +39,7 @@ public class DaysAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     @Override
     public int getItemViewType(int position) {
         if (position < Constants.DAYS_IN_WEEK && calendarView.isShowDaysOfWeek()) {
-            return ItemViewType.DAY_OF_WEEK;
+            return ItemViewType.DAY_OF_WEEK; //First sevent position Mon, Tue, Wed etc..
         }
         if (month.getDays().get(position).isBelongToMonth()) {
             return ItemViewType.MONTH_DAY;

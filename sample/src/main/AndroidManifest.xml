@@ -1,5 +1,5 @@
-<manifest package="com.applikeysolutions.cosmocalendar.sample"
-    xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.applikeysolutions.cosmocalendar.sample">
 
     <application
         android:allowBackup="true"
@@ -9,13 +9,18 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <activity android:name="com.applikeysolutions.cosmocalendar.sample.DefaultCalendarActivity"
+        <activity
+            android:name="com.applikeysolutions.cosmocalendar.sample.MainActivity"
             android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".CalendarPickerActivity"
+            android:screenOrientation="portrait" />
 
     </application>
 

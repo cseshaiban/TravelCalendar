@@ -43,7 +43,8 @@ public class CircleAnimationTextView extends AppCompatTextView {
     private Paint backgroundRectanglePaint;
     private Rect backgroundRectangle;
 
-    public static final int DEFAULT_PADDING = 10;
+    //public static final int DEFAULT_PADDING = 10;
+    public static final int DEFAULT_PADDING = 40;
     public static final int MAX_PROGRESS = 100;
     public static final long SELECTION_ANIMATION_DURATION = 300;
 
@@ -167,7 +168,7 @@ public class CircleAnimationTextView extends AppCompatTextView {
 
     private void createRectanglePaint() {
         rectanglePaint = new Paint();
-        rectanglePaint.setColor(calendarView.getSelectedDayBackgroundColor());
+        rectanglePaint.setColor(calendarView.getSelectedDayBackgroundRectangleColor());
         rectanglePaint.setFlags(Paint.ANTI_ALIAS_FLAG);
     }
 
@@ -183,7 +184,7 @@ public class CircleAnimationTextView extends AppCompatTextView {
 
     private void createBackgroundRectanglePaint() {
         backgroundRectanglePaint = new Paint();
-        backgroundRectanglePaint.setColor(calendarView.getSelectedDayBackgroundColor());
+        backgroundRectanglePaint.setColor(calendarView.getSelectedDayBackgroundRectangleColor());
         backgroundRectanglePaint.setFlags(Paint.ANTI_ALIAS_FLAG);
     }
 

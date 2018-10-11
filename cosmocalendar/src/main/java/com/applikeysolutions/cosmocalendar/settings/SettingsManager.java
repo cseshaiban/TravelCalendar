@@ -22,9 +22,9 @@ import java.util.Set;
 public class SettingsManager implements AppearanceInterface, DateInterface, CalendarListsInterface, SelectionInterface {
 
     //Default values
-    public static final int DEFAULT_MONTH_COUNT = 20;
+    public static final int DEFAULT_MONTH_COUNT = 12;
     public static final int DEFAULT_SELECTION_TYPE = SelectionType.SINGLE;
-    public static final int DEFAULT_FIRST_DAY_OF_WEEK = Calendar.MONDAY;
+    public static final int DEFAULT_FIRST_DAY_OF_WEEK = Calendar.SUNDAY;
     public static final int DEFAULT_ORIENTATION = LinearLayoutManager.VERTICAL;
     public static final int DEFAULT_CONNECTED_DAY_ICON_POSITION = ConnectedDayIconPosition.BOTTOM;
 
@@ -33,6 +33,9 @@ public class SettingsManager implements AppearanceInterface, DateInterface, Cale
     private DateModel dateModel;
     private CalendarListsModel calendarListsModel;
     private SelectionModel selectionModel;
+
+    private Calendar minSelectionDate;
+    private Calendar maxSelectionDate;
 
     public SettingsManager() {
         appearanceModel = new AppearanceModel();
@@ -90,6 +93,11 @@ public class SettingsManager implements AppearanceInterface, DateInterface, Cale
     @Override
     public int getSelectedDayBackgroundColor() {
         return appearanceModel.getSelectedDayBackgroundColor();
+    }
+
+    @Override
+    public int getSelectedDayBackgroundRectangleColor() {
+        return appearanceModel.getSelectedDayBackgroundRectangleColor();
     }
 
     @Override
@@ -205,6 +213,11 @@ public class SettingsManager implements AppearanceInterface, DateInterface, Cale
     @Override
     public void setSelectedDayBackgroundColor(int selectedDayBackgroundColor) {
         appearanceModel.setSelectedDayBackgroundColor(selectedDayBackgroundColor);
+    }
+
+    @Override
+    public void selectedDayBackgroundRectangleColor(int selectedDayBackgroundColor) {
+        appearanceModel.selectedDayBackgroundRectangleColor(selectedDayBackgroundColor);
     }
 
     @Override
@@ -330,5 +343,21 @@ public class SettingsManager implements AppearanceInterface, DateInterface, Cale
     @Override
     public void setFirstDayOfWeek(int firstDayOfWeek) {
         dateModel.setFirstDayOfWeek(firstDayOfWeek);
+    }
+
+    public Calendar getMinSelectionDate() {
+        return minSelectionDate;
+    }
+
+    public void setMinSelectionDate(Calendar minSelectionDate) {
+        this.minSelectionDate = minSelectionDate;
+    }
+
+    public Calendar getMaxSelectionDate() {
+        return maxSelectionDate;
+    }
+
+    public void setMaxSelectionDate(Calendar maxSelectionDate) {
+        this.maxSelectionDate = maxSelectionDate;
     }
 }

@@ -1,5 +1,6 @@
 package com.applikeysolutions.cosmocalendar.adapter.viewholder;
 
+import android.graphics.Color;
 import android.view.View;
 import android.widget.TextView;
 
@@ -22,7 +23,12 @@ public class DayOfWeekHolder extends BaseDayHolder {
     }
 
     public void bind(Day day) {
-        tvDay.setText(mDayOfWeekFormatter.format(day.getCalendar().getTime()));
-        tvDay.setTextColor(calendarView.getWeekDayTitleTextColor());
+        String dayName = mDayOfWeekFormatter.format(day.getCalendar().getTime());
+        tvDay.setText(dayName);
+        if(dayName.equals("Sun")) {
+            tvDay.setTextColor(Color.RED);
+        } else {
+            tvDay.setTextColor(calendarView.getWeekDayTitleTextColor());
+        }
     }
 }

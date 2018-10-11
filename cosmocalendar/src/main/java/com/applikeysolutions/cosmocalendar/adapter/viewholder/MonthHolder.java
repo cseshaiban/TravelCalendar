@@ -39,10 +39,6 @@ public class MonthHolder extends RecyclerView.ViewHolder {
         tvMonthName.setText(month.getMonthName());
         tvMonthName.setTextColor(appearanceModel.getMonthTextColor());
 
-        viewLeftLine.setVisibility(appearanceModel.getCalendarOrientation() == OrientationHelper.HORIZONTAL ? View.INVISIBLE : View.VISIBLE);
-        viewRightLine.setVisibility(appearanceModel.getCalendarOrientation() == OrientationHelper.HORIZONTAL ? View.INVISIBLE : View.VISIBLE);
-        llMonthHeader.setBackgroundResource(appearanceModel.getCalendarOrientation() == OrientationHelper.HORIZONTAL ? R.drawable.border_top_bottom : 0);
-
         monthView.initAdapter(month);
     }
 

@@ -3,14 +3,13 @@ package com.applikeysolutions.cosmocalendar.view;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.res.TypedArray;
-import android.os.AsyncTask;
+import android.graphics.Color;
 import android.os.Build;
 import android.support.annotation.AttrRes;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.StyleRes;
 import android.support.v4.content.ContextCompat;
-import android.support.v4.util.Pair;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.OrientationHelper;
@@ -27,11 +26,11 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.applikeysolutions.cosmocalendar.listeners.OnDateSelectedListener;
+import com.applikeysolutions.cosmocalendar.listeners.OnRangeSelectedListener;
 import com.applikeysolutions.cosmocalendar.selection.NoneSelectionManager;
-import com.applikeysolutions.cosmocalendar.FetchMonthsAsyncTask;
 import com.applikeysolutions.cosmocalendar.adapter.MonthAdapter;
 import com.applikeysolutions.cosmocalendar.listeners.OnMonthChangeListener;
-import com.applikeysolutions.cosmocalendar.selection.selectionbar.SelectionBarItem;
 import com.applikeysolutions.cosmocalendar.settings.SettingsManager;
 import com.applikeysolutions.cosmocalendar.model.Day;
 import com.applikeysolutions.cosmocalendar.model.Month;
@@ -52,7 +51,6 @@ import com.applikeysolutions.cosmocalendar.utils.CalendarUtils;
 import com.applikeysolutions.cosmocalendar.utils.SelectionType;
 import com.applikeysolutions.cosmocalendar.utils.WeekDay;
 import com.applikeysolutions.cosmocalendar.utils.snap.GravitySnapHelper;
-import com.applikeysolutions.cosmocalendar.view.customviews.CircleAnimationTextView;
 import com.applikeysolutions.cosmocalendar.view.customviews.SquareTextView;
 import com.applikeysolutions.cosmocalendar.view.delegate.MonthDelegate;
 import com.applikeysolutions.customizablecalendar.R;
@@ -73,14 +71,6 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
     private SlowdownRecyclerView rvMonths;
     private MonthAdapter monthAdapter;
 
-    //Bottom selection bar
-    private FrameLayout flBottomSelectionBar;
-    //Multiple mode
-    private RecyclerView rvMultipleSelectedList;
-    private MultipleSelectionBarAdapter multipleSelectionBarAdapter;
-    //Range mode
-    private LinearLayout llRangeSelection;
-
     //Views
     private LinearLayout llDaysOfWeekTitles;
     private FrameLayout flNavigationButtons;
@@ -96,13 +86,13 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
     private OnMonthChangeListener onMonthChangeListener;
     private Month previousSelectedMonth;
 
-    private int lastVisibleMonthPosition = SettingsManager.DEFAULT_MONTH_COUNT / 2;
+    private int lastVisibleMonthPosition = 0;
 
-    private FetchMonthsAsyncTask asyncTask;
+    private OnDateSelectedListener onDateSelectedListener;
+    private OnRangeSelectedListener onRangeSelectedListener;
 
     public CalendarView(Context context) {
         super(context);
-        init();
     }
 
     public CalendarView(Context context, @Nullable AttributeSet attrs) {
@@ -121,15 +111,6 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
         handleAttributes(attrs, defStyleAttr, defStyleRes);
     }
 
-    @Override
-    protected void onDetachedFromWindow() {
-        super.onDetachedFromWindow();
-
-        if(asyncTask != null && !asyncTask.isCancelled()){
-            asyncTask.cancel(false);
-        }
-    }
-
     private void handleAttributes(AttributeSet attrs, int defStyle, int defStyleRes) {
         settingsManager = new SettingsManager();
         final TypedArray typedArray = getContext().getTheme().obtainStyledAttributes(attrs, R.styleable.CalendarView, defStyle, defStyleRes);
@@ -139,7 +120,6 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
         } finally {
             typedArray.recycle();
         }
-        init();
     }
 
     /**
@@ -183,6 +163,7 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
         settingsManager.setWeekDayTitleTextColor(weekDayTitleTextColor);
         settingsManager.setSelectedDayTextColor(selectedDayTextColor);
         settingsManager.setSelectedDayBackgroundColor(selectedDayBackgroundColor);
+        settingsManager.selectedDayBackgroundRectangleColor(ContextCompat.getColor(getContext(), R.color.default_selected_day_background_range_color));
         settingsManager.setSelectedDayBackgroundStartColor(selectedDayBackgroundStartColor);
         settingsManager.setSelectedDayBackgroundEndColor(selectedDayBackgroundEndColor);
         settingsManager.setConnectedDayIconRes(connectedDayIconRes);
@@ -230,12 +211,11 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
         return (attr | flag) == attr;
     }
 
-    private void init() {
+    public void init() {
         setDaysOfWeekTitles();
 
         setSelectionManager();
         createRecyclerView();
-        createBottomSelectionBar();
 
         if (settingsManager.getCalendarOrientation() == LinearLayoutManager.HORIZONTAL) {
             createNavigationButtons();
@@ -245,7 +225,7 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
     /**
      * Defines days of week displaying according to calendar orientation
      * HORIZONTAL - displaying below month name and above dates
-     * VERTICAL - displaying above whole calendar
+     * VERTICAL - displaying above whole
      */
     private void setDaysOfWeekTitles() {
         settingsManager.setShowDaysOfWeekTitle(settingsManager.getCalendarOrientation() != LinearLayoutManager.HORIZONTAL);
@@ -279,9 +259,12 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
         LinearLayout.LayoutParams textViewParam = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
         textViewParam.weight = 1;
         for (String title : CalendarUtils.createWeekDayTitles(settingsManager.getFirstDayOfWeek())) {
-            SquareTextView tvDayTitle = new SquareTextView(getContext());
+            TextView tvDayTitle = new TextView(getContext());
             tvDayTitle.setText(title);
             tvDayTitle.setLayoutParams(textViewParam);
+            if (title.equals("Sun")) {
+                tvDayTitle.setTextColor(Color.RED);
+            }
             tvDayTitle.setGravity(Gravity.CENTER);
             llDaysOfWeekTitles.addView(tvDayTitle);
         }
@@ -292,45 +275,6 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
         if (!isTitleAlreadyAdded) {
             addView(llDaysOfWeekTitles);
         }
-    }
-
-    /**
-     * Creates bottom selection bar to show selected days
-     */
-    private void createBottomSelectionBar() {
-        flBottomSelectionBar = new FrameLayout(getContext());
-//        flBottomSelectionBar.setLayoutTransition(new LayoutTransition());
-        flBottomSelectionBar.setId(View.generateViewId());
-        RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        params.addRule(RelativeLayout.BELOW, rvMonths.getId());
-        flBottomSelectionBar.setLayoutParams(params);
-        flBottomSelectionBar.setBackgroundResource(R.drawable.border_top_bottom);
-        flBottomSelectionBar.setVisibility(settingsManager.getCalendarOrientation() == OrientationHelper.HORIZONTAL ? View.VISIBLE : View.GONE);
-        addView(flBottomSelectionBar);
-
-        createMultipleSelectionBarRecycler();
-        createRangeSelectionLayout();
-    }
-
-    /**
-     * Creates recycler view to display selected days in bottom selection bar
-     * Visible only for Multiple selection mode
-     */
-    private void createMultipleSelectionBarRecycler() {
-        rvMultipleSelectedList = new RecyclerView(getContext());
-        rvMultipleSelectedList.setId(View.generateViewId());
-        rvMultipleSelectedList.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        rvMultipleSelectedList.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
-        multipleSelectionBarAdapter = new MultipleSelectionBarAdapter(this, this);
-        rvMultipleSelectedList.setAdapter(multipleSelectionBarAdapter);
-        flBottomSelectionBar.addView(rvMultipleSelectedList);
-    }
-
-    private void createRangeSelectionLayout() {
-        llRangeSelection = (LinearLayout) ((LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(R.layout.view_selection_bar_range, null);
-        llRangeSelection.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        llRangeSelection.setVisibility(GONE);
-        flBottomSelectionBar.addView(llRangeSelection);
     }
 
     private void showDaysOfWeekTitle() {
@@ -375,7 +319,6 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
         if (monthAdapter != null) {
             monthAdapter.notifyDataSetChanged();
             rvMonths.scrollToPosition(lastVisibleMonthPosition);
-            multipleSelectionBarAdapter.notifyDataSetChanged();
         }
     }
 
@@ -396,7 +339,7 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
         changeSnapHelper();
 
         rvMonths.setAdapter(monthAdapter);
-        rvMonths.scrollToPosition(SettingsManager.DEFAULT_MONTH_COUNT / 2);
+        //rvMonths.scrollToPosition(SettingsManager.DEFAULT_MONTH_COUNT / 2);
         rvMonths.addOnScrollListener(pagingScrollListener);
         rvMonths.getRecycledViewPool().setMaxRecycledViews(ItemViewType.MONTH, 10);
         addView(rvMonths);
@@ -460,7 +403,7 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
             }
 
             if (getCalendarOrientation() == OrientationHelper.HORIZONTAL) {
-                multipleSelectionBarAdapter.notifyDataSetChanged();
+                //multipleSelectionBarAdapter.notifyDataSetChanged();
 
                 //Hide navigation buttons
                 boolean show = newState != RecyclerView.SCROLL_STATE_DRAGGING;
@@ -474,17 +417,6 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
         @Override
         public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
             super.onScrolled(recyclerView, dx, dy);
-            final RecyclerView.LayoutManager manager = rvMonths.getLayoutManager();
-
-            int totalItemCount = manager.getItemCount();
-            int firstVisibleItemPosition = getFirstVisiblePosition(manager);
-            lastVisibleMonthPosition = firstVisibleItemPosition;
-
-            if (firstVisibleItemPosition < 2) {
-                loadAsyncMonths(false);
-            } else if (firstVisibleItemPosition >= totalItemCount - 2) {
-                loadAsyncMonths(true);
-            }
         }
     };
 
@@ -494,22 +426,6 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
         } else {
             throw new IllegalArgumentException("Unsupported Layout Manager");
         }
-    }
-
-    private void loadAsyncMonths(final boolean future){
-        if(asyncTask != null && (asyncTask.getStatus() == AsyncTask.Status.PENDING || asyncTask.getStatus() == AsyncTask.Status.RUNNING))
-            return;
-
-        asyncTask = new FetchMonthsAsyncTask();
-        Month month;
-
-        if (future) {
-            month = monthAdapter.getData().get(monthAdapter.getData().size() - 1);
-        } else {
-            month = monthAdapter.getData().get(0);
-        }
-
-        asyncTask.execute(new FetchMonthsAsyncTask.FetchParams(future, month, settingsManager, monthAdapter, SettingsManager.DEFAULT_MONTH_COUNT));
     }
 
     @Override
@@ -562,8 +478,7 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
         if (selectionManager instanceof MultipleSelectionManager) {
             ((MultipleSelectionManager) selectionManager).clearCriteriaList();
         }
-        multipleSelectionBarAdapter.setData(new ArrayList<SelectionBarItem>());
-        setSelectionBarVisibility();
+        //multipleSelectionBarAdapter.setData(new ArrayList<SelectionBarItem>());
         update();
     }
 
@@ -574,9 +489,9 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
      */
     public List<Day> getSelectedDays() {
         List<Day> selectedDays = new ArrayList<>();
-        for(Iterator<Month> monthIterator = monthAdapter.getData().iterator(); monthIterator.hasNext();) {
+        for (Iterator<Month> monthIterator = monthAdapter.getData().iterator(); monthIterator.hasNext(); ) {
             Month month = monthIterator.next();
-            for(Iterator<Day> dayIterator = month.getDaysWithoutTitlesAndOnlyCurrent().iterator(); dayIterator.hasNext();) {
+            for (Iterator<Day> dayIterator = month.getDaysWithoutTitlesAndOnlyCurrent().iterator(); dayIterator.hasNext(); ) {
                 Day day = dayIterator.next();
                 if (selectionManager.isDaySelected(day)) {
                     selectedDays.add(day);
@@ -619,105 +534,28 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
         }
     }
 
-    public SettingsManager getSettingsManager() {
-        return settingsManager;
-    }
-
     private void recreateInitialMonth() {
         monthAdapter.getData().clear();
         monthAdapter.getData().addAll(CalendarUtils.createInitialMonths(settingsManager));
-        lastVisibleMonthPosition = SettingsManager.DEFAULT_MONTH_COUNT / 2;
+        lastVisibleMonthPosition = 0;
     }
 
     @Override
     public void onDaySelected() {
         selectedDays = getSelectedDays();
-        displaySelectedDays();
-    }
-
-    /**
-     * Displays selected days
-     */
-    private void displaySelectedDays() {
-        switch (settingsManager.getSelectionType()) {
-            case SelectionType.MULTIPLE:
-                displaySelectedDaysMultiple();
-                break;
-
-            case SelectionType.RANGE:
-                displaySelectedDaysRange();
-                break;
-
-            default:
-                llRangeSelection.setVisibility(GONE);
-                break;
-        }
-    }
-
-    /**
-     * Display selected days for MULTIPLE mode in bottom bar
-     */
-    private void displaySelectedDaysMultiple() {
-        multipleSelectionBarAdapter.setData(CalendarUtils.getSelectedDayListForMultipleMode(selectedDays));
-    }
-
-    /**
-     * Display selected days for RANGE mode in bottom bar
-     */
-    private void displaySelectedDaysRange() {
-        if (selectionManager instanceof RangeSelectionManager) {
-            Pair<Day, Day> days = ((RangeSelectionManager) selectionManager).getDays();
-            if (days != null) {
-                llRangeSelection.setVisibility(VISIBLE);
-                TextView tvStartRangeTitle = (TextView) llRangeSelection.findViewById(R.id.tv_range_start_date);
-                tvStartRangeTitle.setText(CalendarUtils.getYearNameTitle(days.first));
-                tvStartRangeTitle.setTextColor(getSelectionBarMonthTextColor());
-
-                TextView tvEndRangeTitle = (TextView) llRangeSelection.findViewById(R.id.tv_range_end_date);
-                tvEndRangeTitle.setText(CalendarUtils.getYearNameTitle(days.second));
-                tvEndRangeTitle.setTextColor(getSelectionBarMonthTextColor());
-
-                CircleAnimationTextView catvStart = (CircleAnimationTextView) llRangeSelection.findViewById(R.id.catv_start);
-                catvStart.setText(String.valueOf(days.first.getDayNumber()));
-                catvStart.setTextColor(getSelectedDayTextColor());
-                catvStart.showAsStartCircle(this, true);
-
-                CircleAnimationTextView catvEnd = (CircleAnimationTextView) llRangeSelection.findViewById(R.id.catv_end);
-                catvEnd.setText(String.valueOf(days.second.getDayNumber()));
-                catvEnd.setTextColor(getSelectedDayTextColor());
-                catvEnd.showAsEndCircle(this, true);
-
-                CircleAnimationTextView catvMiddle = (CircleAnimationTextView) llRangeSelection.findViewById(R.id.catv_middle);
-                catvMiddle.showAsRange(this);
-            } else {
-                llRangeSelection.setVisibility(GONE);
+        if (getSelectionType() == SelectionType.SINGLE) {
+            if (selectedDays != null && selectedDays.size() >= 1) {
+                if(onDateSelectedListener != null) {
+                    onDateSelectedListener.onDateSelected(this, selectedDays.get(0), true);
+                }
             }
-        }
-    }
-
-    /**
-     * Defines do we need to show range of selected days in bottom selection bar
-     *
-     * @return
-     */
-    private boolean needToShowSelectedDaysRange() {
-        if (getCalendarOrientation() == OrientationHelper.HORIZONTAL && getSelectionType() == SelectionType.RANGE) {
-            if (selectionManager instanceof RangeSelectionManager) {
-                if (((RangeSelectionManager) selectionManager).getDays() != null) {
-                    return true;
+        } else if (getSelectionType() == SelectionType.RANGE) {
+            if (selectedDays != null && selectedDays.size() >= 2) {
+                if(onRangeSelectedListener != null) {
+                    onRangeSelectedListener.onRangeSelected(this, selectedDays);
                 }
             }
         }
-        return false;
-    }
-
-    /**
-     * Sets selection bar layout visibility
-     */
-    private void setSelectionBarVisibility() {
-        flBottomSelectionBar.setVisibility(getCalendarOrientation() == OrientationHelper.HORIZONTAL ? View.VISIBLE : View.GONE);
-        rvMultipleSelectedList.setVisibility(getCalendarOrientation() == OrientationHelper.HORIZONTAL && getSelectionType() == SelectionType.MULTIPLE ? View.VISIBLE : View.GONE);
-        llRangeSelection.setVisibility(needToShowSelectedDaysRange() ? View.VISIBLE : View.GONE);
     }
 
     @Override
@@ -731,10 +569,9 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
         settingsManager.setSelectionType(selectionType);
         setSelectionManager();
         monthAdapter.setSelectionManager(selectionManager);
-        setSelectionBarVisibility();
 
         //Clear selections and selection bar
-        multipleSelectionBarAdapter.setData(new ArrayList<SelectionBarItem>());
+        //multipleSelectionBarAdapter.setData(new ArrayList<SelectionBarItem>());
         selectionManager.clearSelections();
         if (selectionManager instanceof MultipleSelectionManager) {
             ((MultipleSelectionManager) selectionManager).clearCriteriaList();
@@ -781,6 +618,11 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
     @Override
     public int getSelectedDayBackgroundColor() {
         return settingsManager.getSelectedDayBackgroundColor();
+    }
+
+    @Override
+    public int getSelectedDayBackgroundRectangleColor() {
+        return settingsManager.getSelectedDayBackgroundRectangleColor();
     }
 
     @Override
@@ -910,6 +752,12 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
     }
 
     @Override
+    public void selectedDayBackgroundRectangleColor(int selectedDayBackgroundColor) {
+        settingsManager.selectedDayBackgroundRectangleColor(selectedDayBackgroundColor);
+        update();
+    }
+
+    @Override
     public void setSelectedDayBackgroundStartColor(int selectedDayBackgroundStartColor) {
         settingsManager.setSelectedDayBackgroundStartColor(selectedDayBackgroundStartColor);
         update();
@@ -961,8 +809,6 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
                 flNavigationButtons.setVisibility(GONE);
             }
         }
-
-        setSelectionBarVisibility();
         update();
     }
 
@@ -1061,17 +907,35 @@ public class CalendarView extends RelativeLayout implements OnDaySelectedListene
         }
     }
 
-    public void setOnMonthChangeListener(OnMonthChangeListener onMonthChangeListener){
+    public void setOnMonthChangeListener(OnMonthChangeListener onMonthChangeListener) {
         this.onMonthChangeListener = onMonthChangeListener;
     }
 
     @Override
     public void onSnap(int position) {
         Month month = monthAdapter.getData().get(position);
-        if(onMonthChangeListener != null
+        if (onMonthChangeListener != null
                 && (previousSelectedMonth == null || !previousSelectedMonth.getMonthName().equals(month.getMonthName()))) {
-                onMonthChangeListener.onMonthChanged(month);
+            onMonthChangeListener.onMonthChanged(month);
             previousSelectedMonth = month;
         }
+    }
+
+    public void setOnDateSelectedListener(OnDateSelectedListener listener) {
+        this.onDateSelectedListener = listener;
+    }
+
+    public void setOnRangeSelectedListener(OnRangeSelectedListener listener) {
+        this.onRangeSelectedListener = listener;
+    }
+
+    public void setSelectedDate(Calendar date) {
+        Day day = new Day(date);
+        day.setSelected(true);
+        getSelectionManager().toggleDay(day);
+    }
+
+    public SettingsManager getSettingsManager() {
+        return settingsManager;
     }
 }
