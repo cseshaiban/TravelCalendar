@@ -8,6 +8,11 @@ import com.applikeysolutions.cosmocalendar.model.Day;
 import java.util.Calendar;
 import java.util.Date;
 
+import static java.util.Calendar.DATE;
+import static java.util.Calendar.DAY_OF_WEEK;
+import static java.util.Calendar.MONTH;
+import static java.util.Calendar.YEAR;
+
 public class DateUtils {
 
     public static Calendar getCalendar(Date date) {
@@ -112,5 +117,53 @@ public class DateUtils {
         calendar.set(Calendar.MINUTE, 59);
         calendar.set(Calendar.SECOND, 59);
         calendar.set(Calendar.MILLISECOND, 59);
+    }
+
+    public static int getYear(Calendar calendar) { return calendar.get(YEAR); }
+
+    public static int getMonth(Calendar calendar) {
+        return calendar.get(MONTH);
+    }
+
+    public static int getDay(Calendar calendar) {
+        return calendar.get(DATE);
+    }
+
+    public static int getDayOfWeek(Calendar calendar) {
+        return calendar.get(DAY_OF_WEEK);
+    }
+
+    public static boolean isDayInRange(Calendar day, Calendar dayStart, Calendar dayEnd) {
+        Calendar calendarStart = Calendar.getInstance();
+        calendarStart.setTime(dayStart.getTime());
+        setCalendarToStartOfDay(calendarStart);
+
+        Calendar calendarEnd = Calendar.getInstance();
+        calendarEnd.setTime(dayEnd.getTime());
+        setCalendarToEndOfDay(calendarEnd);
+
+        return day.getTimeInMillis() >= calendarStart.getTimeInMillis()
+                && day.getTimeInMillis() <= calendarEnd.getTimeInMillis();
+    }
+
+    public static boolean isWithinRange(Calendar day, Calendar dayStart, Calendar dayEnd) {
+        return day.after(dayStart) && day.before(dayEnd) || isCurrentDate(day.getTime());
+    }
+
+    public static int calculateMonths(Calendar start, Calendar end) {
+        int monthsBetween = 0;
+        int dateDiff = end.get(Calendar.DAY_OF_MONTH) - start.get(Calendar.DAY_OF_MONTH);
+        if (dateDiff < 0) {
+            int borrrow = end.getActualMaximum(Calendar.DAY_OF_MONTH);
+            dateDiff = (end.get(Calendar.DAY_OF_MONTH) + borrrow) - start.get(Calendar.DAY_OF_MONTH);
+            monthsBetween--;
+
+            if (dateDiff > 0) monthsBetween++;
+        } else {
+            monthsBetween++;
+        }
+        monthsBetween += end.get(Calendar.MONTH) - start.get(Calendar.MONTH);
+        monthsBetween += (end.get(Calendar.YEAR) - start.get(Calendar.YEAR)) * 12;
+        return monthsBetween;
     }
 }

@@ -47,8 +47,8 @@ public class CalendarPickerActivity extends AppCompatActivity implements OnDateS
     private CalendarView calendarView;
     private Toolbar toolbar;
 
-    private Calendar mMinSelectedDate; // Calendar ends (1 year)
-    private Calendar mMaxSelectedDate;
+    private Calendar mMinSelectedDate; // Calendar min date
+    private Calendar mMaxSelectedDate; // Calendar max date
 
     private int mRangeLimit;
     private boolean mAllowedSameDay = true;
@@ -71,9 +71,17 @@ public class CalendarPickerActivity extends AppCompatActivity implements OnDateS
 
     private void initViews() {
         calendarView = (CalendarView) findViewById(R.id.calendar_view);
-        calendarView.init();
 
-        calendarView.setCalendarOrientation(OrientationHelper.HORIZONTAL);
+        mMinSelectedDate = (Calendar) getIntent().getSerializableExtra(KEY_MIN_DATE);
+        mMaxSelectedDate = (Calendar) getIntent().getSerializableExtra(KEY_MAX_DATE);
+        calendarView.getSettingsManager().setMinSelectionDate(mMinSelectedDate);
+        calendarView.getSettingsManager().setMaxSelectionDate(mMaxSelectedDate);
+
+        calendarView.getSettingsManager().setCalendarOrientation(OrientationHelper.HORIZONTAL);
+
+        calendarView.init(); // calendar begins
+
+
 
         String type = getIntent().getStringExtra(KEY_CALENDAR_MODE);
         switch (type) {
@@ -84,12 +92,6 @@ public class CalendarPickerActivity extends AppCompatActivity implements OnDateS
             default:
                 calendarView.setSelectionType(SelectionType.SINGLE);
         }
-
-        mMinSelectedDate = (Calendar) getIntent().getSerializableExtra(KEY_MIN_DATE);
-        mMaxSelectedDate = (Calendar) getIntent().getSerializableExtra(KEY_MAX_DATE);
-        calendarView.getSettingsManager().setMinSelectionDate(mMinSelectedDate);
-        calendarView.getSettingsManager().setMaxSelectionDate(mMaxSelectedDate);
-        calendarView.update();
 
         mRangeLimit = getIntent().getIntExtra(KEY_RANGE_LIMIT, 0);
         mAllowedSameDay = getIntent().getBooleanExtra(KEY_ALLOWED_SAME_DAY, true);
@@ -102,10 +104,12 @@ public class CalendarPickerActivity extends AppCompatActivity implements OnDateS
         mEndDate = endDate;
 
         if(hasOpenCalendar && mEndDate != null) {
-            //single
+            //range
+            //calendarView.selectRange(CalendarDay.from(mStartDate), CalendarDay.from(mEndDate));
         }
 
         if (hasOpenCalendar && startDate != null) {
+            //single
             calendarView.setSelectedDate(startDate);
         }
 
@@ -149,8 +153,8 @@ public class CalendarPickerActivity extends AppCompatActivity implements OnDateS
                                              Calendar maxDate, Calendar startDate, int productType, boolean hasOpenCalendar, boolean isFromReschedule) {
         Intent intent = new Intent(activity, CalendarPickerActivity.class);
         intent.putExtra(KEY_CALENDAR_MODE, "single");
-        intent.putExtra(KEY_MIN_DATE, minDate);
-        intent.putExtra(KEY_MAX_DATE, maxDate);
+        intent.putExtra(KEY_MIN_DATE, minDate); // Calendar start
+        intent.putExtra(KEY_MAX_DATE, maxDate); // Calendar end
         intent.putExtra(KEY_START_DATE, startDate);
         intent.putExtra(KEY_PRODUCT_TYPE, productType);
         intent.putExtra(KEY_CALENDAR_OPEN, hasOpenCalendar);

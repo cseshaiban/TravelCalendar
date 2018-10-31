@@ -3,6 +3,7 @@ package com.applikeysolutions.cosmocalendar.utils;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.BitmapFactory;
+import android.support.annotation.NonNull;
 import android.view.WindowManager;
 
 import com.applikeysolutions.cosmocalendar.settings.SettingsManager;
@@ -23,6 +24,18 @@ import java.util.Locale;
 import java.util.Set;
 
 public final class CalendarUtils {
+
+    public static List<Month> createInitialMonths(SettingsManager settingsManager) {
+        final List<Month> months = new ArrayList<>();
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(settingsManager.getMinSelectionDate().getTimeInMillis());
+        int numOfMonth = DateUtils.calculateMonths(settingsManager.getMinSelectionDate(), settingsManager.getMaxSelectionDate());
+        for (int i = 0; i < numOfMonth; i++) {
+            months.add(createMonth(calendar.getTime(), settingsManager)); //Create each month
+            DateUtils.addMonth(calendar);
+        }
+        return months;
+    }
 
     public static Month createMonth(Date date, SettingsManager settingsManager) {
         final List<Day> days = new ArrayList<>();
@@ -68,6 +81,36 @@ public final class CalendarUtils {
         return day;
     }
 
+    /**
+     * Sets variables(isWeekend, isDisabled, isFromConnectedCalendar) to day
+     */
+    public static void setDay(Day day, SettingsManager settingsManager) {
+        if (settingsManager.getWeekendDays() != null) {
+            day.setWeekend(settingsManager.getWeekendDays().contains(day.getCalendar().get(Calendar.DAY_OF_WEEK)));
+        }
+
+        if (settingsManager.getDisabledDays() != null) {
+            day.setDisabled(isDayInSet(day, settingsManager.getDisabledDays()));
+        }
+
+        if (settingsManager.getDisabledDaysCriteria() != null) {
+            if (!day.isDisabled()) {
+                day.setDisabled(isDayDisabledByCriteria(day, settingsManager.getDisabledDaysCriteria()));
+            }
+        }
+
+        if (settingsManager.getConnectedDaysManager().isAnyConnectedDays()) {
+            settingsManager.getConnectedDaysManager().applySettingsToDay(day);
+        }
+
+        // Calendar start range
+        if (settingsManager.getMinSelectionDate() != null && settingsManager.getMaxSelectionDate() != null) {
+            if (!DateUtils.isWithinRange(day.getCalendar(), settingsManager.getMinSelectionDate(), settingsManager.getMaxSelectionDate())) {
+                day.setDisabled(true);
+            }
+        }
+    }
+
     private static List<DayOfWeek> createDaysOfWeek(Date firstDisplayedDay) {
         final List<DayOfWeek> daysOfTheWeek = new ArrayList<>();
 
@@ -91,17 +134,6 @@ public final class CalendarUtils {
             DateUtils.addDay(calendar);
         } while (calendar.get(Calendar.DAY_OF_WEEK) != firstDayOfWeek);
         return titles;
-    }
-
-    public static List<Month> createInitialMonths(SettingsManager settingsManager) {
-        final List<Month> months = new ArrayList<>();
-
-        final Calendar calendar = Calendar.getInstance();
-        for (int i = 0; i < SettingsManager.DEFAULT_MONTH_COUNT; i++) {
-            months.add(createMonth(calendar.getTime(), settingsManager));
-            DateUtils.addMonth(calendar);
-        }
-        return months;
     }
 
     /**
@@ -143,36 +175,6 @@ public final class CalendarUtils {
 
     public static int getDisplayWidth(Context context) {
         return ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getWidth();
-    }
-
-    /**
-     * Sets variables(isWeekend, isDisabled, isFromConnectedCalendar) to day
-     */
-    public static void setDay(Day day, SettingsManager settingsManager) {
-        if (settingsManager.getWeekendDays() != null) {
-            day.setWeekend(settingsManager.getWeekendDays().contains(day.getCalendar().get(Calendar.DAY_OF_WEEK)));
-        }
-
-        if (settingsManager.getDisabledDays() != null) {
-            day.setDisabled(isDayInSet(day, settingsManager.getDisabledDays()));
-        }
-
-        if (settingsManager.getDisabledDaysCriteria() != null) {
-            if (!day.isDisabled()) {
-                day.setDisabled(isDayDisabledByCriteria(day, settingsManager.getDisabledDaysCriteria()));
-            }
-        }
-
-        if (settingsManager.getConnectedDaysManager().isAnyConnectedDays()) {
-            settingsManager.getConnectedDaysManager().applySettingsToDay(day);
-        }
-
-        if (settingsManager.getMinSelectionDate() != null && settingsManager.getMaxSelectionDate() != null) {
-            if (day.getCalendar().getTimeInMillis() < settingsManager.getMinSelectionDate().getTimeInMillis() &&
-                    day.getCalendar().getTimeInMillis() < settingsManager.getMaxSelectionDate().getTimeInMillis()) {
-                day.setDisabled(true);
-            }
-        }
     }
 
     public static boolean isDayInSet(Day day, Set<Long> daysInSet) {
